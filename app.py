@@ -15,8 +15,11 @@ if not api_key:
 
 os.environ["GOOGLE_API_KEY"] = api_key
 
-# Load PDF before running chatbot
+# Load PDF
 pdf_path = "/home/ashutosh/Codes/Projects/Rag_Based_Chat_Bot/Ashutosh_Resume.pdf"
+if not os.path.exists(pdf_path):
+    raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+
 loader = PyPDFLoader(pdf_path)
 docs = loader.load()
 
@@ -24,16 +27,17 @@ docs = loader.load()
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 documents = text_splitter.split_documents(docs)
 
-# Convert Text to Embeddings (FIXED MODEL NAME)
-embedding_model = GoogleGenerativeAIEmbeddings(model="embedding-001")
-vectorstore = Chroma.from_documents(documents, embedding_model)
+# Convert Text to Embeddings (Updated Model Name)
+embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+vectorstore = Chroma.from_documents(documents, embedding_model, persist_directory="vector_db")
 
 # Create Retriever
 retriever = vectorstore.as_retriever()
 
-# Initialize Gemini LLM
-llm = ChatGoogleGenerativeAI(model="gemini-pro")
-qa_chain = RetrievalQA(llm=llm, retriever=retriever)
+# Use Free Gemini Model
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")  # Free model
+
+qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
 # Streamlit UI
 st.set_page_config(page_title="RAG Chatbot", layout="wide")
@@ -44,5 +48,8 @@ user_query = st.text_input("Ask a question about the document:")
 
 if user_query:
     with st.spinner("Generating answer..."):
-        response = qa_chain.run(user_query)
-        st.write("**Answer:**", response)
+        try:
+            response = qa_chain.invoke({"query": user_query})  # Fixed method
+            st.write("**Answer:**", response['result'])
+        except Exception as e:
+            st.error(f"Error: {e}")
