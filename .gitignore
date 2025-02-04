@@ -4,6 +4,9 @@
 # Ignore virtual environment directory
 envrag/
 
+# Ignoring the Pdf files
+*.pdf
+
 # Compiled source #
 ###################
 *.com
